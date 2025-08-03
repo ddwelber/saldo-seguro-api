@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String?
+  firstName String?
+  lastName  String?
+  cpf       String?    @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  sheets    Sheet[]
+  accounts  Account[]
+  userPlans UserPlan[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(uuid())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Sheet {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  year      Int
+  months    Month[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, year])
+  @@map("sheets")
+}
+
+model Month {
+  id            String         @id @default(uuid())
+  sheet         Sheet          @relation(fields: [sheetId], references: [id])
+  sheetId       String
+  month         Int
+  entries       Entry[]
+  expenses      Expense[]
+  dailyBalances DailyBalance[]
+
+  @@unique([sheetId, month])
+  @@map("months")
+}
+
+model Entry {
+  id          String   @id @default(uuid())
+  month       Month    @relation(fields: [monthId], references: [id])
+  monthId     String
+  description String?
+  amount      Float
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("entries")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  month       Month    @relation(fields: [monthId], references: [id])
+  monthId     String
+  description String?
+  amount      Float
+  date        DateTime
+  isFixed     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expenses")
+}
+
+model DailyBalance {
+  id                  String   @id @default(uuid())
+  month               Month    @relation(fields: [monthId], references: [id])
+  monthId             String
+  day                 Int
+  balance             Float
+  averageDailyExpense Float?
+  status              Status
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([monthId, day])
+  @@map("daily_balances")
+}
+
+model Plan {
+  id          String     @id @default(uuid())
+  name        String
+  maxMonths   Int
+  priceCents  Int
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userPlans   UserPlan[]
+
+  @@map("plans")
+}
+
+model UserPlan {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+  planId    String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("user_plans")
+}
+
+enum Status {
+  GREEN
+  YELLOW
+  RED
+}
